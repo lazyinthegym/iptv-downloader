@@ -1,8 +1,6 @@
 import requests
 import tkinter as tk
 from tkinter import messagebox, Listbox, ttk
-from PIL import Image, ImageTk
-import io
 
 # IPTV credentials
 USERNAME = 'ahmadismael92'
@@ -12,6 +10,7 @@ PLAYER_API = f'{BASE_URL}/player_api.php?username={USERNAME}&password={PASSWORD}
 
 # Global variables to hold all movies
 all_movies = []
+search_movie_indices = []  # To store indices of movies displayed in search
 selected_movie = None  # To keep track of the currently selected movie
 
 
@@ -50,11 +49,16 @@ def download_movie(stream_id, movie_name):
 
 # Function to search and display movies
 def search_movies():
+    global search_movie_indices
     query = search_entry.get().lower()
     search_results.delete(0, tk.END)
-    for movie in all_movies:
+    search_movie_indices = []  # Clear previous search result indices
+
+    for i, movie in enumerate(all_movies):
         if query in movie['name'].lower():
             search_results.insert(tk.END, movie['name'])
+            search_movie_indices.append(i)  # Store the index of the movie in all_movies
+
     search_results.bind('<<ListboxSelect>>', on_movie_select)
 
 
@@ -64,27 +68,10 @@ def on_movie_select(event):
     selection = event.widget.curselection()
     if selection:
         index = selection[0]
-        selected_movie = all_movies[index]
-        stream_id = selected_movie['stream_id']
-
-        # Show the movie image
-        load_movie_image(selected_movie['stream_icon'])
+        selected_movie = all_movies[search_movie_indices[index]]  # Get movie using the correct index
 
         # Update download button and enable it
         download_button.pack()
-
-
-# Function to load the movie image
-def load_movie_image(image_url):
-    response = requests.get(image_url)
-    if response.status_code == 200:
-        image_data = Image.open(io.BytesIO(response.content))
-        image_data = image_data.resize((200, 300), Image.ANTIALIAS)  # Resize image
-        movie_image = ImageTk.PhotoImage(image_data)
-
-        movie_image_label.config(image=movie_image)
-        movie_image_label.image = movie_image  # Keep a reference
-        movie_image_label.pack()
 
 
 # Function to fetch all movies and update progress bar
@@ -136,8 +123,7 @@ search_entry = tk.Entry(root, width=50)
 search_button = tk.Button(root, text="Search", command=search_movies)
 search_results = Listbox(root, width=50, height=15)
 
-# Movie image display
-movie_image_label = tk.Label(root)
+# Download button
 download_button = tk.Button(root, text="Download", command=start_download)
 
 # Progress bar for downloading
