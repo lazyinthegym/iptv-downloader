@@ -1,2 +1,5 @@
 .idea
 .DS_store
+*.mp4
+*.mkv
+movies_data.json

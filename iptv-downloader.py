@@ -1,6 +1,8 @@
 import requests
 import tkinter as tk
 from tkinter import messagebox, Listbox, ttk
+import threading
+import json
 
 # IPTV credentials
 USERNAME = 'ahmadismael92'
@@ -27,8 +29,12 @@ def get_movies(category_id):
 
 
 # Function to download movie
-def download_movie(stream_id, movie_name):
-    movie_url = f'{BASE_URL}/movie/{USERNAME}/{PASSWORD}/{stream_id}.mkv'
+def download_movie(selected_movie):
+    stream_id = selected_movie['stream_id']
+    movie_name = selected_movie['name']
+    container_extension = selected_movie['container_extension']
+
+    movie_url = f'{BASE_URL}/movie/{USERNAME}/{PASSWORD}/{stream_id}.{container_extension}'
     response = requests.get(movie_url, stream=True)
     total_size = int(response.headers.get('content-length', 0))
 
@@ -36,7 +42,8 @@ def download_movie(stream_id, movie_name):
         messagebox.showerror("Error", "Failed to download movie")
         return
 
-    with open(f'{movie_name}.mkv', 'wb') as file:
+    with open(f'{movie_name}.{container_extension}', 'wb') as file:
+        progress_bar['value'] = 0  # Reset progress bar for download
         progress_bar['maximum'] = total_size
         for chunk in response.iter_content(chunk_size=1024):
             if chunk:
@@ -77,6 +84,7 @@ def on_movie_select(event):
 # Function to fetch all movies and update progress bar
 def fetch_movies():
     global all_movies
+    all_movies.clear()  # Reset the list of movies to avoid duplication
     categories = get_categories()
     total_categories = len(categories)
     progress['maximum'] = total_categories
@@ -87,6 +95,10 @@ def fetch_movies():
         all_movies.extend(movies)
         progress['value'] = i + 1
         root.update_idletasks()
+
+    # Save all_movies into a JSON file
+    with open('movies_data.json', 'w') as json_file:
+        json.dump(all_movies, json_file, indent=4)
 
     # Hide progress bar and show search UI
     progress.pack_forget()
@@ -99,10 +111,10 @@ def fetch_movies():
 # Function to start the download process
 def start_download():
     if selected_movie:
-        stream_id = selected_movie['stream_id']
-        movie_name = selected_movie['name']
         progress_bar.pack(pady=10)
-        download_movie(stream_id, movie_name)
+
+        # Run the download in a separate thread to prevent UI freezing
+        threading.Thread(target=download_movie, args=(selected_movie,), daemon=True).start()
 
 
 # GUI setup
