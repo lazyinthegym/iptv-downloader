@@ -49,7 +49,9 @@ def download_movie(selected_movie):
         progress_bar['maximum'] = total_size
         downloaded_size = 0
 
-        for chunk in response.iter_content(chunk_size=73728):
+        chunk_size_megabytes = 5
+        chunk_size_bytes = chunk_size_megabytes * 1024 * 1024
+        for chunk in response.iter_content(chunk_size=chunk_size_bytes):
             if chunk:
                 file.write(chunk)
                 downloaded_size += len(chunk)
