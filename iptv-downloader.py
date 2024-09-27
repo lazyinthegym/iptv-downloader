@@ -28,7 +28,7 @@ def get_movies(category_id):
     return response.json() if response.status_code == 200 else []
 
 
-# Function to download movie
+# Function to download movie with progress size displayed
 def download_movie(selected_movie):
     stream_id = selected_movie['stream_id']
     movie_name = selected_movie['name']
@@ -42,13 +42,24 @@ def download_movie(selected_movie):
         messagebox.showerror("Error", "Failed to download movie")
         return
 
+    total_size_mb = total_size / (1024 * 1024)  # Convert bytes to megabytes
+
     with open(f'{movie_name}.{container_extension}', 'wb') as file:
         progress_bar['value'] = 0  # Reset progress bar for download
         progress_bar['maximum'] = total_size
-        for chunk in response.iter_content(chunk_size=1024):
+        downloaded_size = 0
+
+        for chunk in response.iter_content(chunk_size=73728):
             if chunk:
                 file.write(chunk)
+                downloaded_size += len(chunk)
                 progress_bar['value'] += len(chunk)
+
+                # Update the download size label
+                downloaded_mb = downloaded_size / (1024 * 1024)  # Convert to megabytes
+                download_size_label.config(
+                    text=f"Downloaded: {downloaded_mb:.2f} MB / {total_size_mb:.2f} MB"
+                )
                 root.update_idletasks()
 
     messagebox.showinfo("Download Complete", f"{movie_name} has been downloaded!")
@@ -112,6 +123,7 @@ def fetch_movies():
 def start_download():
     if selected_movie:
         progress_bar.pack(pady=10)
+        download_size_label.pack()  # Show the label for download size
 
         # Run the download in a separate thread to prevent UI freezing
         threading.Thread(target=download_movie, args=(selected_movie,), daemon=True).start()
@@ -140,6 +152,9 @@ download_button = tk.Button(root, text="Download", command=start_download)
 
 # Progress bar for downloading
 progress_bar = ttk.Progressbar(root, orient='horizontal', length=400, mode='determinate')
+
+# Label to show downloaded size
+download_size_label = tk.Label(root, text="Downloaded: 0 MB / 0 MB")
 
 # Fetch movies in the background after the app starts
 root.after(100, fetch_movies)
